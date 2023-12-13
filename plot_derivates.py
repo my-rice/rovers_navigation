@@ -9,9 +9,8 @@ bound4 = 1.0
 
 resolution = 0.1
 
-obs_points = np.array(np.mat('0 0 0 0 0;0.2 0.4 0.6 0.8 -0.8;0 0 0 0 0'))
-goal_points = np.array(np.mat('-1.4; -0.8; 0'))
-    
+goal_points = np.array(np.mat('0; 0; 0'))
+obs_points = np.array(np.mat('-0.3 -0.3 -0.3 0 0.3 0.3 0.3; -0.3 0 0.3 0.3 0.3 0 -0.3; 0 0 0 0 0 0 0'))
 def V(x,y):
     return x**2+y**2
 
@@ -75,6 +74,39 @@ def state_cost_with_additional_term(x,y):
                 + np.exp(-0.5*((state[1]-(-1.0))/0.02)**2)/(0.02*np.sqrt(2*np.pi)))
     return(cost)
 
+def state_cost_with_additional_term_with_cilinder(x,y):
+    state = np.array([x,y])
+
+    v = np.array([0.02, 0.02], dtype=np.float32)
+    covar = np.diag(v)
+    gauss_sum = 0
+
+    for i in range(np.size(obs_points,axis=1)):
+        #print("state[:2]\n",state[:2])
+        #print("obs_points[:2,i]\n",obs_points[:2,i])
+        gauss_sum += 20*my_cilinder(state[:2],obs_points[:2,i])
+
+    state_cost = ((state[0]-goal_points[0])**2 + (state[1]-goal_points[1])**2) -1/((state[0]-goal_points[0])**2 + (state[1]-goal_points[1])**2 +0.1)
+    cost = 30*state_cost + gauss_sum + 10*(np.exp(-0.5*((state[0]-(-1.5))/0.02)**2)/(0.02*np.sqrt(2*np.pi))
+                + np.exp(-0.5*((state[0]-1.5)/0.02)**2)/(0.02*np.sqrt(2*np.pi)) + np.exp(-0.5*((state[1]-1.0)/0.02)**2)/(0.02*np.sqrt(2*np.pi))
+                + np.exp(-0.5*((state[1]-(-1.0))/0.02)**2)/(0.02*np.sqrt(2*np.pi)))
+    return(cost)
+
+
+def state_cost_with_abs_terms(state,goal_points,obs_points):
+    v = np.array([0.02, 0.02], dtype=np.float32)
+    covar = np.diag(v)
+    gauss_sum = 0
+
+    for i in range(np.size(obs_points,axis=1)):
+        gauss_sum += 20*my_logpdf(state[:2],obs_points[:2,i],covar)
+
+    state_cost = 60*(np.abs(state[0]-goal_points[0]) + np.abs(state[1]-goal_points[1])) -1/((state[0]-goal_points[0])**2 + (state[1]-goal_points[1])**2 +0.1)
+
+    cost = state_cost + gauss_sum + 10*(np.exp(-0.5*((state[0]-(-1.5))/0.02)**2)/(0.02*np.sqrt(2*np.pi))
+                + np.exp(-0.5*((state[0]-1.5)/0.02)**2)/(0.02*np.sqrt(2*np.pi)) + np.exp(-0.5*((state[1]-1.0)/0.02)**2)/(0.02*np.sqrt(2*np.pi))
+                + np.exp(-0.5*((state[1]-(-1.0))/0.02)**2)/(0.02*np.sqrt(2*np.pi)))
+    return(cost)
 
 def plot_cost(cost_name='V'):
     x_axis = np.linspace(bound1,bound2,100)
@@ -88,6 +120,10 @@ def plot_cost(cost_name='V'):
         #costs = np.array([[state_cost((x,y),goal_points,obs_points) for x in X_axis] for y in Y_axis] )
     elif cost_name == 'state_cost':
         Z = np.array([[state_cost(x,y) for x in x_axis] for y in y_axis] )
+    elif cost_name == 'state_cost_with_additional_term_with_cilinder':
+        Z = np.array([[state_cost_with_additional_term_with_cilinder(x,y) for x in x_axis] for y in y_axis] )
+    elif cost_name == 'state_cost_with_abs_terms':
+        Z = np.array([[state_cost_with_abs_terms(np.array([x,y]),goal_points,obs_points) for x in x_axis] for y in y_axis] )
     else:
         Z = V(X,Y)
     #print(Z.shape)
@@ -114,7 +150,7 @@ def plot_cost(cost_name='V'):
 
 
 if __name__ == "__main__":
-    selected_cost = 'state_cost'
+    selected_cost = 'state_cost_with_abs_terms'
     plot_cost(selected_cost)
     print('Done')
 
