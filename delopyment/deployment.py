@@ -116,6 +116,18 @@ def state_cost_estimated_proposed(state,goal_points,obs_points,weights):
         cost += -weights[:,i+2+np.size(obs_points,axis=1)+5]*y_wall(y) 
     return(cost)
 
+def state_cost_estimated(state,goal_points,obs_points,weights):
+    v = np.array([0.025, 0.025], dtype=np.float32)
+    covar = np.diag(v)
+
+    gauss_sum = 0
+
+    for i in range(np.size(obs_points,axis=1)):
+        gauss_sum += -weights[:,i+1]*my_logpdf(state[:2],obs_points[:2,i],covar)
+
+    cost = -weights[:,0]*((((state[0]-goal_points[0])**2 + (state[1]-goal_points[1])**2))) + gauss_sum
+    return(cost)
+
 ################# CONTROL FUNCTIONS #####################
 def Control_step(state,U_space_1,U_space_2,goal_points,obs_points, cost_func, use_interpolated_function=False):
     target_pf = 1/control_space_size**2 # Uniform pf q(u_k|x_k-1)
@@ -151,6 +163,10 @@ COST_FUNCTIONS = {
     'state_cost_estimated_proposed': {
         'function': state_cost_estimated_proposed,
         'obs_feature_points': np.array(np.mat('0 0 0 0 0 0.8 0.8 0.8 0.8 0.8 -0.8 -0.8 -0.8 -0.8 -0.8 1.2 1.2 1.2 1.2 1.2 0.4 0.4 0.4 0.4 0.4 -0.4 -0.4 -0.4 -0.4 -0.4 -1.2 -1.2 -1.2 -1.2 -1.2; -0.8 -0.4 0 0.4 0.8 -0.8 -0.4 0 0.4 0.8 -0.8 -0.4 0 0.4 0.8 -0.8 -0.4 0 0.4 0.8 -0.8 -0.4 0 0.4 0.8 -0.8 -0.4 0 0.4 0.8 -0.8 -0.4 0 0.4 0.8; 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ')),
+    },
+    'state_cost_estimated': {
+        'function': state_cost_estimated,
+        'obs_feature_points':np.array(np.mat('0 0 0 0 0 0.8 0.8 0.8 0.8 0.8 -0.8 -0.8 -0.8 -0.8 -0.8;-0.8 -0.4 0 0.4 0.8 -0.8 -0.4 0 0.4 0.8 -0.8 -0.4 0 0.4 0.8;0 0 0 0 0 0 0 0 0 0 0 0 0 0 0')),
     }
 }
 
@@ -159,13 +175,18 @@ SCENARIOS = {
         'goal_points': np.array(np.mat('+1.3; -0.3; 0')), 
         'obs_points': np.array(np.mat('0.4 -0.8 -0.4 0.7 0.7; -0.5 0.4 -0.8 0.8 -0.8; 0 0 0 0 0')),
         'initial_conditions': np.array(np.mat('-0.9;-0.75; 0')),
-    }
+    },
+    'baseline': {
+        'goal_points': np.array(np.mat('-1.4; -0.8; 0')), 
+        'obs_points': np.array(np.mat('0 0 0 0 0;0.2 0.4 0.6 0.8 -0.8;0 0 0 0 0')),
+        'initial_conditions': np.array(np.mat('1.4;0.9; 0')),
+    },
 }
 
 config = {
-    "cost_function": "state_cost_estimated_proposed",
-    "scenario": "A",
-    "weights": "weights_proposed_cost_for_foc_scenario.npy"
+    "cost_function": "state_cost_estimated",
+    "scenario": "baseline",
+    "weights": "weights_baseline_cost_baseline_scenario.npy"
 }
 
 
