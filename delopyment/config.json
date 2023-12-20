@@ -1,0 +1,5 @@
+{
+    "cost_function": "state_cost_estimated_proposed",
+    "scenario": "A",
+    "weights": "weights_proposed_cost_for_foc_scenario.npy"
+}
