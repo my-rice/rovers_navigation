@@ -9,6 +9,7 @@ import scipy.stats as st
 import scipy.stats as st
 import matplotlib.pyplot as plt 
 import numpy as np
+import matplotlib
 
 ################# UTILITIES #####################
 control_space_size = 3
@@ -186,7 +187,7 @@ SCENARIOS = {
 config = {
     "cost_function": "state_cost_estimated",
     "scenario": "baseline",
-    "weights": "weights_baseline_cost_baseline_scenario.npy"
+    "weights": "weights_proposed_cost_baseline_scenario.npy"
 }
 
 
@@ -194,7 +195,7 @@ if __name__ == "__main__":
     # Read json file
     # with open('config.json') as json_file:
     #     config = json.load(json_file)
-    
+    matplotlib.use('TkAgg')
     cost_function_family = COST_FUNCTIONS[config['cost_function']]['function']
     scenario = SCENARIOS[config['scenario']]
     goal_points = scenario['goal_points']
