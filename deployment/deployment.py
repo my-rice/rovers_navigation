@@ -89,14 +89,47 @@ def state_cost(state,goal_points,obs_points):
                 + np.exp(-0.5*((state[1]-(-1.0))/0.02)**2)/(0.02*np.sqrt(2*np.pi)))
     return(cost)
 
+def indicator_function(X,Y):
+    condition = np.logical_or(np.logical_or(X < -1.5, X > 1.5), np.logical_or(Y < -1.0, Y > 1.0))
+    inf = 500
+    result = np.where(condition, inf, 0)
+    return result
+
+def proposed_state_cost(state, goal_points, obs_points,params=None):
+    """This is the cost function we propose to use for the experiments."""
+    if params is None:
+        rho = 0.000000
+        var_x = 0.140000
+        var_y = 0.140000
+        A = 30.000000
+    else:
+        rho = params['rho']
+        var_x = params['var_x']
+        var_y = params['var_y']
+        A = params['A']
+
+    barrier_variance = 0.05
+    cov = np.array([[var_x, rho*np.sqrt(var_x)*np.sqrt(var_y)], [rho*np.sqrt(var_x)*np.sqrt(var_y), var_y]])
+
+    goal_cost = (state[0]-goal_points[0])**2 + (state[1]-goal_points[1])**2 -1/np.sqrt(((state[0]-goal_points[0])**2 + (state[1]-goal_points[1])**2 +0.1))
+
+    obstacle_cost = 0
+    for i in range(np.size(obs_points,axis=1)):
+        obstacle_cost += A*my_logpdf(state[:2],obs_points[:2,i],cov) + 15*my_logpdf(state[:2],obs_points[:2,i],np.array([[0.01, 0], [0, 0.01]]))
+    
+    barrier_cost = 10*(np.exp(-0.5*((state[0]-(-1.5))/barrier_variance)**2)/(barrier_variance*np.sqrt(2*np.pi))
+                + np.exp(-0.5*((state[0]-1.5)/barrier_variance)**2)/(barrier_variance*np.sqrt(2*np.pi)) + np.exp(-0.5*((state[1]-1.0)/barrier_variance)**2)/(barrier_variance*np.sqrt(2*np.pi))
+                + np.exp(-0.5*((state[1]-(-1.0))/barrier_variance)**2)/(barrier_variance*np.sqrt(2*np.pi))) + indicator_function(state[0],state[1])
+    return (30*goal_cost + obstacle_cost + barrier_cost)
+
 def state_cost_estimated_proposed(state,goal_points,obs_points,weights):
     # This function evaluates the estimated cost function on a given state
-    # Feature 0 is the goal feature
-    # Features 1 to len(obs_points[0]) are the obstacle features
+    # Feature 0,1 is the goal feature
+    # Features 2 to len(obs_points[0]) are the obstacle features
     # Features len(obs_points[0])+1 to len(obs_points[0])+5 are the vertical walls features
     # Features len(obs_points[0])+6 to len(obs_points[0])+10 are the horizontal walls features
     barrier_variance=0.05
-    v = np.array([0.025, 0.025], dtype=np.float32)
+    v = np.array([0.020, 0.020], dtype=np.float32)
     covar = np.diag(v)
     gauss_sum = 0
     for i in range(np.size(obs_points,axis=1)):
@@ -161,6 +194,9 @@ COST_FUNCTIONS = {
     'state_cost': {
         'function': state_cost
     },
+    'proposed_state_cost': {
+        'function': proposed_state_cost
+    },
     'state_cost_estimated_proposed': {
         'function': state_cost_estimated_proposed,
         'obs_feature_points': np.array(np.mat('0 0 0 0 0 0.8 0.8 0.8 0.8 0.8 -0.8 -0.8 -0.8 -0.8 -0.8 1.2 1.2 1.2 1.2 1.2 0.4 0.4 0.4 0.4 0.4 -0.4 -0.4 -0.4 -0.4 -0.4 -1.2 -1.2 -1.2 -1.2 -1.2; -0.8 -0.4 0 0.4 0.8 -0.8 -0.4 0 0.4 0.8 -0.8 -0.4 0 0.4 0.8 -0.8 -0.4 0 0.4 0.8 -0.8 -0.4 0 0.4 0.8 -0.8 -0.4 0 0.4 0.8 -0.8 -0.4 0 0.4 0.8; 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ')),
@@ -185,9 +221,11 @@ SCENARIOS = {
 }
 
 config = {
-    "cost_function": "state_cost_estimated",
+    "cost_function": "state_cost",
     "scenario": "baseline",
-    "weights": "weights_proposed_cost_baseline_scenario.npy"
+    "weights": "weights_proposed_cost_baseline_scenario.npy",
+    "IOC": False,
+    "show": False,
 }
 
 
@@ -195,23 +233,29 @@ if __name__ == "__main__":
     # Read json file
     # with open('config.json') as json_file:
     #     config = json.load(json_file)
-    matplotlib.use('TkAgg')
-    cost_function_family = COST_FUNCTIONS[config['cost_function']]['function']
+    if config['show']:
+        matplotlib.use('TkAgg')
+
     scenario = SCENARIOS[config['scenario']]
     goal_points = scenario['goal_points']
     obs_points = scenario['obs_points']
-    weights = np.load(config['weights'])
-    obs_feature_points = COST_FUNCTIONS[config['cost_function']]['obs_feature_points']
+    if config['IOC']:
+        weights = np.load(config['weights'])
     
-    cost_function = lambda state,goal_points,obs_points: cost_function_family(state,goal_points,obs_feature_points,weights)
-    
+    if config['IOC']:
+        cost_function_family = COST_FUNCTIONS[config['cost_function']]['function']
+        obs_feature_points = COST_FUNCTIONS[config['cost_function']]['obs_feature_points']
+        cost_function = lambda state,goal_points,obs_points: cost_function_family(state,goal_points,obs_feature_points,weights)
+    else:
+        cost_function = COST_FUNCTIONS[config['cost_function']]['function']
+        
     # print('Cost function: ', cost_function)
     # print('Scenario: ', scenario)
     # print('Weights: ', weights)
     
     N = 1 #Amount of robots per simulation
 
-    r = robotarium.Robotarium(number_of_robots=N, show_figure=True, initial_conditions=np.copy(scenario['initial_conditions']), sim_in_real_time=False)
+    r = robotarium.Robotarium(number_of_robots=N, show_figure=config['show'], initial_conditions=np.copy(scenario['initial_conditions']), sim_in_real_time=False)
     si_to_uni_dyn = create_si_to_uni_dynamics_with_backwards_motion() #Converts single integrator inputs to unicycle inputs (low-level controller)
     _, uni_to_si_states = create_si_to_uni_mapping()
 
