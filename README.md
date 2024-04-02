@@ -19,7 +19,7 @@ The platform offers both a high fidelity simulator and a remotely accessible exp
 ## Simulation on the Robotarium
 The following video shows the simulation of the robot navigating in an uncertain environment using the proposed IOC algorithm. The robot is required to reach the desired destination and avoid obstacles. The cost is estimated from observations and used to compute the optimal policy.
 <p align="center">
-  <img width="800" src="https://github.com/my-rice/rovers_navigation/assets/13086284/9e07beed-d882-4bcd-a392-7f60fe26e845" alt="Simulation with ioc"/>
+  <img width="800" src="https://github.com/my-rice/rovers_navigation/blob/main/videos/robotarium-poposed-ioc.mp4" alt="Simulation with ioc"/>
 </p>
 
 ## Requirements
